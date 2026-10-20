@@ -19,7 +19,7 @@ export class ReservationsService {
   async cancel(id: number): Promise<ReservationEntity> {
     const reservation = await this.findOne(id);
     this.reservationRulesService.ensureCanCancel(reservation);
-    reservation
+    reservation.status = "cancelled"
     return this.reservationsRepository.save(reservation);
   }
 

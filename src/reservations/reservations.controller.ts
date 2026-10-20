@@ -19,6 +19,7 @@ export class ReservationsController {
   ){
     return this.reservationsService.cancel(id);
   }
+  
   // The endpoints below are completed. Do not change them.
   @Get()
   findAll() {
