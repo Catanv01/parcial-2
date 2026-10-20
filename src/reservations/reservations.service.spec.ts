@@ -5,7 +5,7 @@ import { RoomEntity } from '../rooms/entities/room.entity';
 import { ReservationEntity } from './entities/reservation.entity';
 import { ReservationRulesService } from './reservation-rules.service';
 import { ReservationsService } from './reservations.service';
-import { describe, beforeEach, jest, it } from '@jest/globals';
+import { describe, beforeEach, jest, it, expect } from '@jest/globals';
 
 describe('ReservationsService', () => {
   let service: ReservationsService;
@@ -52,6 +52,23 @@ describe('ReservationsService', () => {
     // TODO TEST 2: Arrange dependencies, call cancel(7), and check the required behavior.
     reservationsRepositoryMock.findOne.mockResolvedValue(reservation);
     reservationsRepositoryMock.save.mockResolvedValue(savedReservation);
+    reservationRulesServiceMock.ensureCanCancel.mockResolvedValue(undefined);
+
+    const result = await service.cancel(7);
+
+    expect(reservationsRepositoryMock.findOne).toHaveBeenCalledWith({
+      where: { id: 7 }, 
+      relations: { room: true },
+    });
+    
+    expect(reservationRulesServiceMock.ensureCanCancel).toHaveBeenCalledWith(reservation);
+    
+    expect(reservationsRepositoryMock.save).toHaveBeenCalledTimes(1);
+    expect(reservationsRepositoryMock.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelled" }),
+    );
+    expect(result).toBe(savedReservation);
+  });
 
 
   it('does not change or save a reservation when the rule rejects cancellation', async () => {
@@ -63,8 +80,12 @@ describe('ReservationsService', () => {
       room: { id: 2, name: 'Room B' },
     } as ReservationEntity;
 
-    // TODO TEST 3: Make the mock rule reject this ACTIVE reservation, as requested.
-    // Check the exception, the unchanged state, and the absence of a save() call.
-    throw new Error('TODO TEST 3: complete the rejected cancellation test');
+      reservationsRepositoryMock.findOne.mockResolvedValue(reservation);
+      (reservationRulesServiceMock.ensureCanCancel as any).mockRejectedValue(
+      new ConflictException('Reservation cannot be cancelled'),
+    )
+    await expect(service.cancel(7)).rejects.toThrow(ConflictException);
+    expect(reservation.status).toBe('active');
+    expect(reservationsRepositoryMock.save).not.toHaveBeenCalled();
   });
 });
